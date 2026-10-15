@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Thắm & Thơ Đi Học Về - Game Giáo Dục Trẻ Em</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      background: linear-gradient(135deg, #1e2438, #111422);
+      color: #333;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #game-container {
+      position: relative;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
+      border-radius: 16px;
+      overflow: hidden;
+      background: #000;
+    }
+    canvas {
+      display: block;
+      background: #fff;
+      cursor: pointer;
+    }
+    #mobile-hint {
+      position: absolute;
+      bottom: 8px;
+      right: 12px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <canvas id="gameCanvas" width="1000" height="650"></canvas>
+    <div id="mobile-hint">Thắm & Thơ Đi Học Về • BYD Sealion 6</div>
+  </div>
+
+  <script>
+    // ==========================================
+    // SOUND ENGINE (Web Audio API + Audio Files)
+    // ==========================================
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+        this.voices = {
+          yeu_tham_tho: new Audio('/yeu_tham_tho.mp3'),
+          bo_me: new Audio('/chuc_mung_bo_me.mp3')
+        };
+      }
+
+      initContext() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      play(type) {
+        if (!this.enabled) return;
+        this.initContext();
+        if (!this.ctx) return;
+
+        try {
+          const t = this.ctx.currentTime;
+          if (type === 'door_close') {
+            // Tiếng thịch đóng cửa xe BYD + tiếng lẫy kim loại
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.frequency.setValueAtTime(100, t);
+            osc.frequency.exponentialRampToValueAtTime(35, t + 0.3);
+            gain.gain.setValueAtTime(0.8, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.3);
+
+            // Cạch kim loại
+            const osc2 = this.ctx.createOscillator();
+            const gain2 = this.ctx.createGain();
+            osc2.type = 'triangle';
+            osc2.frequency.setValueAtTime(2200, t + 0.04);
+            gain2.gain.setValueAtTime(0.4, t + 0.04);
+            gain2.gain.exponentialRampToValueAtTime(0.01, t + 0.09);
+            osc2.connect(gain2);
+            gain2.connect(this.ctx.destination);
+            osc2.start(t + 0.04);
+            osc2.stop(t + 0.09);
+          } else if (type === 'backpack') {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.frequency.setValueAtTime(450, t);
+            gain.gain.setValueAtTime(0.35, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.2);
+          } else if (type === 'shoe') {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.frequency.setValueAtTime(320, t);
+            gain.gain.setValueAtTime(0.5, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.18);
+          } else if (type === 'eat') {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.frequency.setValueAtTime(600, t);
+            osc.frequency.exponentialRampToValueAtTime(260, t + 0.15);
+            gain.gain.setValueAtTime(0.4, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.15);
+          } else if (type === 'wash') {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.frequency.setValueAtTime(800, t);
+            osc.frequency.linearRampToValueAtTime(1200, t + 0.15);
+            gain.gain.setValueAtTime(0.25, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.25);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.25);
+          } else if (type === 'sweep') {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, t);
+            gain.gain.setValueAtTime(0.18, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.2);
+          } else if (type === 'toy') {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(784, t);
+            gain.gain.setValueAtTime(0.4, t);
+            gain.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.35);
+          } else if (type === 'point') {
+            // Đô - Mi - Sol - Đố (C5, E5, G5, C6)
+            [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+              const o = this.ctx.createOscillator();
+              const g = this.ctx.createGain();
+              o.frequency.setValueAtTime(f, t + i * 0.08);
+              g.gain.setValueAtTime(0.35, t + i * 0.08);
+              g.gain.exponentialRampToValueAtTime(0.01, t + i * 0.08 + 0.3);
+              o.connect(g);
+              g.connect(this.ctx.destination);
+              o.start(t + i * 0.08);
+              o.stop(t + i * 0.08 + 0.3);
+            });
+          } else if (type === 'victory') {
+            // Fanfare
+            const notes = [
+              [523.25, 0.0, 0.15],
+              [659.25, 0.18, 0.15],
+              [783.99, 0.36, 0.15],
+              [1046.5, 0.54, 0.55],
+              [880.0, 1.15, 0.18],
+              [1046.5, 1.35, 0.6]
+            ];
+            notes.forEach(([f, st, dur]) => {
+              const o = this.ctx.createOscillator();
+              const g = this.ctx.createGain();
+              o.type = 'triangle';
+              o.frequency.setValueAtTime(f, t + st);
+              g.gain.setValueAtTime(0.4, t + st);
+              g.gain.exponentialRampToValueAtTime(0.01, t + st + dur);
+              o.connect(g);
+              g.connect(this.ctx.destination);
+              o.start(t + st);
+              o.stop(t + st + dur);
+            });
+          }
+        } catch (e) {
+          console.warn("Lỗi phát âm thanh:", e);
+        }
+      }
+
+      playVoice(name) {
+        if (!this.enabled) return;
+        const v = this.voices[name];
+        if (v) {
+          v.currentTime = 0;
+          v.play().catch(e => console.log("Cần tương tác để phát giọng nói:", e));
+        }
+      }
+    }
+
+    // ==========================================
+    // ASSET LOADER (Avatars of Thắm & Thơ)
+    // ==========================================
+    const imgTham = new Image();
+    imgTham.src = '/assets/avatar_tham.png';
+    const imgTho = new Image();
+    imgTho.src = '/assets/avatar_tho.png';
+
+    // ==========================================
+    // MAIN GAME CLASS
+    // ==========================================
+    class WebGame {
+      constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.sound = new SoundEngine();
+
+        this.width = 1000;
+        this.height = 650;
+        this.tick = 0;
+
+        this.scenes = ["car", "shoes", "study", "dining", "dishes", "living_room", "victory"];
+        this.currentScene = "car";
+        this.tasksDone = new Array(8).fill(false);
+        this.points = 0;
+        this.toastText = "";
+        this.toastTimer = 0;
+
+        // Scene States
+        this.initCar();
+        this.initShoes();
+        this.initStudy();
+        this.initDining();
+        this.initDishes();
+        this.initLivingRoom();
+        this.initVictory();
+
+        this.bindEvents();
+        this.fitToScreen();
+        window.addEventListener('resize', () => this.fitToScreen());
+
+        requestAnimationFrame(() => this.loop());
+      }
+
+      fitToScreen() {
+        const padding = 16;
+        const availW = window.innerWidth - padding * 2;
+        const availH = window.innerHeight - padding * 2;
+        const scale = Math.min(availW / this.width, availH / this.height, 1.25);
+        this.canvas.style.width = `${Math.floor(this.width * scale)}px`;
+        this.canvas.style.height = `${Math.floor(this.height * scale)}px`;
+      }
+
+      showToast(text, duration = 120) {
+        this.toastText = text;
+        this.toastTimer = duration;
+      }
+
+      completeTask(taskIndex, msg) {
+        const idx = taskIndex - 1;
+        if (!this.tasksDone[idx]) {
+          this.tasksDone[idx] = true;
+          this.points = this.tasksDone.filter(Boolean).length;
+          this.sound.play('point');
+          if (msg) this.showToast(msg);
+          if (this.points >= 8) {
+            this.switchScene('victory');
+          }
+        }
+      }
+
+      switchScene(name) {
+        this.currentScene = name;
+        if (name === 'victory') {
+          this.sound.play('victory');
+          setTimeout(() => this.sound.playVoice('yeu_tham_tho'), 800);
+        }
+      }
+
+      resetGame() {
+        this.tasksDone = new Array(8).fill(false);
+        this.points = 0;
+        this.initCar();
+        this.initShoes();
+        this.initStudy();
+        this.initDining();
+        this.initDishes();
+        this.initLivingRoom();
+        this.initVictory();
+        this.currentScene = "car";
+      }
+
+      // ==========================================
+      // SCENE INITIALIZATIONS
+      // ==========================================
+      initCar() {
+        this.car = {
+          doorClosed: false,
+          thamBackpackTaken: false,
+          thoBackpackTaken: false,
+          blink: 0,
+          timer: 0
+        };
+      }
+
+      initShoes() {
+        this.shoes = {
+          thamOnRack: false,
+          thoOnRack: false,
+          timer: 0
+        };
+      }
+
+      initStudy() {
+        this.study = {
+          thamPlaced: false,
+          thoPlaced: false,
+          timer: 0
+        };
+      }
+
+      initDining() {
+        this.dining = {
+          foodEaten: [false, false, false, false],
+          bites: 0,
+          timer: 0
+        };
+      }
+
+      initDishes() {
+        this.dishes = {
+          step: 0,
+          waterRunning: false,
+          bubbles: [],
+          timer: 0
+        };
+      }
+
+      initLivingRoom() {
+        this.living = {
+          dust: [
+            { x: 180, y: 490, cleaned: false, type: 'leaf' },
+            { x: 260, y: 530, cleaned: false, type: 'paper' },
+            { x: 340, y: 480, cleaned: false, type: 'dust' },
+            { x: 420, y: 540, cleaned: false, type: 'paper' },
+            { x: 500, y: 500, cleaned: false, type: 'leaf' },
+          ],
+          toys: [
+            { name: 'Gấu Teddy', x: 620, y: 480, w: 50, h: 50, stored: false, col: '#b47850' },
+            { name: 'Ô tô mini', x: 700, y: 510, w: 55, h: 40, stored: false, col: '#f03c3c' },
+            { name: 'Lego khối', x: 780, y: 480, w: 45, h: 45, stored: false, col: '#3cb4f0' },
+            { name: 'Bóng tròn', x: 850, y: 505, w: 45, h: 45, stored: false, col: '#ffc828' },
+          ]
+        };
+      }
+
+      initVictory() {
+        this.fireworks = [];
+      }
+
+      // ==========================================
+      // INPUT HANDLING
+      // ==========================================
+      bindEvents() {
+        const getPos = (e) => {
+          const rect = this.canvas.getBoundingClientRect();
+          const scaleX = this.width / rect.width;
+          const scaleY = this.height / rect.height;
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          return {
+            x: (clientX - rect.left) * scaleX,
+            y: (clientY - rect.top) * scaleY
+          };
+        };
+
+        const handleInteraction = (e) => {
+          this.sound.initContext();
+          const { x, y } = getPos(e);
+
+          // Top Bar Click Checks
+          if (this.currentScene !== 'victory') {
+            // Sound button
+            if (x >= 895 && x <= 980 && y >= 18 && y <= 54) {
+              this.sound.enabled = !this.sound.enabled;
+              return;
+            }
+            // Back button
+            if (x >= 720 && x <= 795 && y >= 18 && y <= 54) {
+              const idx = this.scenes.indexOf(this.currentScene);
+              if (idx > 0) this.switchScene(this.scenes[idx - 1]);
+              return;
+            }
+            // Next button
+            if (x >= 805 && x <= 880 && y >= 18 && y <= 54) {
+              const idx = this.scenes.indexOf(this.currentScene);
+              if (idx < this.scenes.length - 2) this.switchScene(this.scenes[idx + 1]);
+              return;
+            }
+          }
+
+          // Scene specific events
+          this.handleSceneClick(x, y);
+        };
+
+        this.canvas.addEventListener('mousedown', handleInteraction);
+        this.canvas.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          handleInteraction(e);
+        }, { passive: false });
+      }
+
+      handleSceneClick(x, y) {
+        if (this.currentScene === 'car') {
+          // If tasks done, tap anywhere to advance
+          if (this.tasksDone[0] && this.tasksDone[1]) {
+            this.switchScene('shoes');
+            return;
+          }
+          // Door close
+          if (!this.car.doorClosed && x >= 400 && x <= 620 && y >= 230 && y <= 440) {
+            this.car.doorClosed = true;
+            this.car.blink = 40;
+            this.sound.play('door_close');
+            this.completeTask(1, "Bé giỏi lắm! Đã đóng cửa xe BYD Sealion 6 màu đen an toàn! (+1 điểm ⭐)");
+            return;
+          }
+          // Thắm backpack
+          if (!this.car.thamBackpackTaken && x >= 300 && x <= 370 && y >= 250 && y <= 350) {
+            this.car.thamBackpackTaken = true;
+            this.sound.play('backpack');
+            this.showToast("Bé Thắm đã nhận được chiếc cặp hồng dâu tây xinh xắn!");
+            if (this.car.thoBackpackTaken) this.completeTask(2, "Tuyệt vời! Hai bé đã lấy đủ cặp sách xuống xe! (+1 điểm ⭐)");
+            return;
+          }
+          // Thơ backpack
+          if (!this.car.thoBackpackTaken && x >= 370 && x <= 440 && y >= 250 && y <= 350) {
+            this.car.thoBackpackTaken = true;
+            this.sound.play('backpack');
+            this.showToast("Bé Thơ đã nhận được chiếc cặp vàng ngôi sao rực rỡ!");
+            if (this.car.thamBackpackTaken) this.completeTask(2, "Tuyệt vời! Hai bé đã lấy đủ cặp sách xuống xe! (+1 điểm ⭐)");
+            return;
+          }
+        }
+        else if (this.currentScene === 'shoes') {
+          // If done, tap anywhere to go to study
+          if (this.tasksDone[2]) {
+            this.switchScene('study');
+            return;
+          }
+          if (!this.shoes.thamOnRack && !this.shoes.thoOnRack) {
+            if (x < 350 || (x >= 230 && x <= 370 && y >= 470 && y <= 550)) {
+              this.shoes.thamOnRack = true;
+              this.sound.play('shoe');
+              this.showToast("Giày hồng xinh của Thắm đã xếp ngay ngắn lên tầng 1!");
+            } else {
+              this.shoes.thoOnRack = true;
+              this.sound.play('shoe');
+              this.showToast("Giày vàng xinh của Thơ đã xếp ngay ngắn lên tầng 2!");
+            }
+          } else if (!this.shoes.thamOnRack) {
+            this.shoes.thamOnRack = true;
+            this.sound.play('shoe');
+            this.showToast("Giày hồng xinh của Thắm đã xếp ngay ngắn lên tầng 1!");
+          } else if (!this.shoes.thoOnRack) {
+            this.shoes.thoOnRack = true;
+            this.sound.play('shoe');
+            this.showToast("Giày vàng xinh của Thơ đã xếp ngay ngắn lên tầng 2!");
+          }
+
+          if (this.shoes.thamOnRack && this.shoes.thoOnRack && !this.tasksDone[2]) {
+            this.completeTask(3, "Bé giỏi quá! Giày dép đã cất gọn gàng lên kệ sắc màu! (+1 điểm ⭐)");
+            this.shoes.timer = 90;
+          }
+        }
+        else if (this.currentScene === 'study') {
+          // If task done, tap anywhere advances to dining
+          if (this.tasksDone[3]) {
+            this.switchScene('dining');
+            return;
+          }
+          if (!this.study.thamPlaced && !this.study.thoPlaced) {
+            if (x < 590) {
+              this.study.thamPlaced = true;
+              this.sound.play('backpack');
+              this.showToast("Đã cất chiếc cặp hồng dâu tây của Thắm vào Ngăn tủ 1!");
+            } else {
+              this.study.thoPlaced = true;
+              this.sound.play('backpack');
+              this.showToast("Đã cất chiếc cặp vàng ngôi sao của Thơ vào Ngăn tủ 2!");
+            }
+          } else if (!this.study.thamPlaced) {
+            this.study.thamPlaced = true;
+            this.sound.play('backpack');
+            this.showToast("Đã cất chiếc cặp hồng dâu tây của Thắm vào Ngăn tủ 1!");
+          } else if (!this.study.thoPlaced) {
+            this.study.thoPlaced = true;
+            this.sound.play('backpack');
+            this.showToast("Đã cất chiếc cặp vàng ngôi sao của Thơ vào Ngăn tủ 2!");
+          }
+
+          if (this.study.thamPlaced && this.study.thoPlaced && !this.tasksDone[3]) {
+            this.completeTask(4, "Xuất sắc! Cặp sách đã được cất gọn gàng vào tủ 2 ngăn! (+1 điểm ⭐)");
+            this.study.timer = 90;
+          }
+        }
+        else if (this.currentScene === 'dining') {
+          if (this.tasksDone[4]) {
+            this.switchScene('dishes');
+            return;
+          }
+          // Eat foods
+          const foods = [
+            { x: 400, y: 340, w: 70, h: 60, name: "Bát cơm dẻo" },
+            { x: 475, y: 335, w: 75, h: 55, name: "Món sườn rim thơm phức" },
+            { x: 555, y: 335, w: 75, h: 55, name: "Rau củ ngọt mát" },
+            { x: 635, y: 340, w: 70, h: 60, name: "Bát canh nóng ấm" },
+          ];
+          for (let i = 0; i < 4; i++) {
+            const f = foods[i];
+            if (!this.dining.foodEaten[i] && (
+              (x >= f.x && x <= f.x + f.w && y >= f.y && y <= f.y + f.h) ||
+              (x >= 320 && x <= 760 && y >= 310 && y <= 500)
+            )) {
+              this.dining.foodEaten[i] = true;
+              this.dining.bites++;
+              this.sound.play('eat');
+              this.showToast(`Hai bé ăn ${f.name} ngon tuyệt! Măm măm!`);
+              if (this.dining.bites >= 4) {
+                this.completeTask(5, "Tuyệt vời! Thắm & Thơ đã ăn cơm thật ngoan và no bụng! (+1 điểm ⭐)");
+                this.dining.timer = 90;
+              }
+              return;
+            }
+          }
+        }
+        else if (this.currentScene === 'dishes') {
+          if (this.tasksDone[5]) {
+            this.switchScene('living_room');
+            return;
+          }
+          if (this.dishes.step === 0 && (y < 290 || (x >= 450 && x <= 560 && y >= 170 && y <= 290))) {
+            this.dishes.step = 1;
+            this.dishes.waterRunning = true;
+            this.sound.play('wash');
+            this.showToast("Đã mở vòi nước! Giờ hãy lấy bọt biển xà phòng chùi bát nhé!");
+          } else if (this.dishes.step === 1 && (x > 640 || (x >= 670 && x <= 770 && y >= 330 && y <= 410))) {
+            this.dishes.step = 2;
+            this.sound.play('wash');
+            for (let i = 0; i < 25; i++) {
+              this.dishes.bubbles.push({
+                x: 400 + Math.random() * 220,
+                y: 330 + Math.random() * 90,
+                r: 6 + Math.random() * 10
+              });
+            }
+            this.showToast("Bọt xà phòng trắng xoá! Bấm vào bồn để xả nước tráng sạch!");
+          } else if (this.dishes.step === 2) {
+            this.dishes.step = 3;
+            this.dishes.waterRunning = false;
+            this.sound.play('point');
+            this.completeTask(6, "Bé thật chăm chỉ! Bát đĩa đã sạch bóng kin kít! (+1 điểm ⭐)");
+            this.dishes.timer = 90;
+          }
+        }
+        else if (this.currentScene === 'living_room') {
+          if (this.tasksDone[6] && this.tasksDone[7]) {
+            this.switchScene('victory');
+            return;
+          }
+          // Sweep dust
+          for (let d of this.living.dust) {
+            if (!d.cleaned && Math.hypot(x - d.x, y - d.y) <= 32) {
+              d.cleaned = true;
+              this.sound.play('sweep');
+              this.showToast("Soạt soạt! Bé quét sạch mẩu rác rồi!");
+              if (this.living.dust.every(d => d.cleaned)) {
+                this.completeTask(7, "Tuyệt cú mèo! Sàn nhà đã quét sạch bóng loáng! (+1 điểm ⭐)");
+              }
+              return;
+            }
+          }
+          // Collect toys
+          for (let t of this.living.toys) {
+            if (!t.stored && Math.hypot(x - t.x, y - t.y) <= 32) {
+              t.stored = true;
+              this.sound.play('toy');
+              this.showToast(`Bính boong! Đã cất ${t.name} vào thùng đồ chơi!`);
+              if (this.living.toys.every(t => t.stored)) {
+                this.completeTask(8, "Hoan hô! Tất cả đồ chơi đã được cất ngăn nắp! (+1 điểm ⭐)");
+              }
+              return;
+            }
+          }
+        }
+        else if (this.currentScene === 'victory') {
+          // Replay game
+          if (x >= this.width / 2 - 135 && x <= this.width / 2 + 135 && y >= 570 && y <= 624) {
+            this.resetGame();
+            return;
+          }
+          // Voice 1: Yêu Thắm Thơ
+          if (x >= this.width / 2 - 250 && x <= this.width / 2 - 10 && y >= 508 && y <= 554) {
+            this.sound.playVoice('yeu_tham_tho');
+            this.showToast("❤ Yêu Thắm Thơ! ❤", 90);
+            return;
+          }
+          // Voice 2: Bố Mẹ
+          if (x >= this.width / 2 + 10 && x <= this.width / 2 + 250 && y >= 508 && y <= 554) {
+            this.sound.playVoice('bo_me');
+            this.showToast("👨‍👩‍👧‍👧 Bố mẹ yêu hai em bé! 👨‍👩‍👧‍👧", 120);
+            return;
+          }
+        }
+      }
+
+      // ==========================================
+      // UPDATE & LOOP
+      // ==========================================
+      loop() {
+        this.tick++;
+
+        // Update timers
+        if (this.car.timer > 0 && --this.car.timer === 0) this.switchScene('shoes');
+        if (this.shoes.timer > 0 && --this.shoes.timer === 0) this.switchScene('study');
+        if (this.study.timer > 0 && --this.study.timer === 0) this.switchScene('dining');
+        if (this.dining.timer > 0 && --this.dining.timer === 0) this.switchScene('dishes');
+        if (this.dishes.timer > 0 && --this.dishes.timer === 0) this.switchScene('living_room');
+
+        if (this.car.blink > 0) this.car.blink--;
+
+        // Update fireworks
+        if (this.currentScene === 'victory') {
+          if (this.tick % 24 === 0) {
+            const colors = ['#ff3b30', '#ff9500', '#ffcc00', '#34c759', '#007aff', '#af52de', '#ff2d55'];
+            const fx = 150 + Math.random() * (this.width - 300);
+            const fy = 100 + Math.random() * 220;
+            const c = colors[Math.floor(Math.random() * colors.length)];
+            for (let i = 0; i < 30; i++) {
+              const angle = Math.random() * Math.PI * 2;
+              const spd = 2 + Math.random() * 5;
+              this.fireworks.push({
+                x: fx, y: fy,
+                vx: Math.cos(angle) * spd,
+                vy: Math.sin(angle) * spd,
+                alpha: 1.0,
+                color: c,
+                size: 3 + Math.random() * 3
+              });
+            }
+          }
+          for (let p of this.fireworks) {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.08; // gravity
+            p.alpha -= 0.015;
+          }
+          this.fireworks = this.fireworks.filter(p => p.alpha > 0);
+        }
+
+        // Draw current scene
+        this.draw();
+
+        requestAnimationFrame(() => this.loop());
+      }
+
+      // ==========================================
+      // RENDERING FUNCTIONS
+      // ==========================================
+      draw() {
+        const ctx = this.ctx;
+        ctx.clearRect(0, 0, this.width, this.height);
+
+        switch (this.currentScene) {
+          case 'car': this.drawCarScene(); break;
+          case 'shoes': this.drawShoesScene(); break;
+          case 'study': this.drawStudyScene(); break;
+          case 'dining': this.drawDiningScene(); break;
+          case 'dishes': this.drawDishesScene(); break;
+          case 'living_room': this.drawLivingRoomScene(); break;
+          case 'victory': this.drawVictoryScene(); break;
+        }
+
+        if (this.currentScene !== 'victory') {
+          this.drawHUD();
+        }
+
+        this.drawToast();
+      }
+
+      drawHUD() {
+        const ctx = this.ctx;
+        // HUD bar
+        ctx.fillStyle = '#ffffff';
+        this.roundRect(ctx, 10, 8, this.width - 20, 56, 16, true, false);
+        ctx.strokeStyle = '#ffb4c8';
+        ctx.lineWidth = 2;
+        this.roundRect(ctx, 10, 8, this.width - 20, 56, 16, false, true);
+
+        // Avatars of Thắm & Thơ
+        this.drawCircularAvatar(ctx, imgTham, 20, 17, 38, '#ff78a0');
+        this.drawCircularAvatar(ctx, imgTho, 62, 17, 38, '#ffc314');
+
+        // Title
+        ctx.fillStyle = '#d23c64';
+        ctx.font = 'bold 17px "Segoe UI", sans-serif';
+        ctx.fillText("🎒 Thắm & Thơ Đi Học Về", 110, 42);
+
+        // 8 Stars Score
+        const startX = 340;
+        for (let i = 0; i < 8; i++) {
+          const sx = startX + i * 32;
+          const sy = 36;
+          const done = this.tasksDone[i];
+          this.drawStar(ctx, sx, sy, done ? 12 : 10, done ? '#ffc814' : '#bebec8', done);
+          ctx.fillStyle = done ? '#6e5000' : '#9696a0';
+          ctx.font = 'bold 9px "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText((i + 1).toString(), sx, sy + 3);
+        }
+
+        // Score Text
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#e67800';
+        ctx.font = 'bold 16px "Segoe UI", sans-serif';
+        ctx.fillText(`⭐ ${this.points}/8`, 605, 42);
+
+        // Navigation Buttons
+        this.drawButton(ctx, 720, 18, 75, 36, "◄ Trước", '#f5f5fa', '#50505a', 13);
+        this.drawButton(ctx, 805, 18, 75, 36, "Sau ►", '#f5f5fa', '#50505a', 13);
+        const sndTxt = this.sound.enabled ? "🔊 Bật" : "🔇 Tắt";
+        const sndBg = this.sound.enabled ? '#e6f5e6' : '#ffe6e6';
+        const sndCol = this.sound.enabled ? '#287832' : '#b42828';
+        this.drawButton(ctx, 895, 18, 85, 36, sndTxt, sndBg, sndCol, 13);
+      }
+
+      drawToast() {
+        if (this.toastTimer > 0) {
+          this.toastTimer--;
+          const ctx = this.ctx;
+          ctx.save();
+          ctx.font = 'bold 19px "Segoe UI", sans-serif';
+          const tw = ctx.measureText(this.toastText).width;
+          const bx = this.width / 2 - tw / 2 - 20;
+          ctx.fillStyle = '#28a03c';
+          this.roundRect(ctx, bx, 75, tw + 40, 42, 12, true, false);
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          this.roundRect(ctx, bx, 75, tw + 40, 42, 12, false, true);
+          ctx.fillStyle = '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.fillText(this.toastText, this.width / 2, 102);
+          ctx.restore();
+        }
+      }
+
+      // ==========================================
+      // SCENE 1: CAR (BYD SEALION 6)
+      // ==========================================
+      drawCarScene() {
+        const ctx = this.ctx;
+        // Sky, sun, grass, road
+        ctx.fillStyle = '#afdafc';
+        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.fillStyle = '#ffeb64';
+        ctx.beginPath();
+        ctx.arc(880, 90, 45, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Grass & Road
+        ctx.fillStyle = '#82cc66';
+        ctx.fillRect(0, 360, this.width, this.height - 360);
+        ctx.fillStyle = '#788291';
+        this.roundRect(ctx, 100, 420, 720, 190, 16, true, false);
+
+        // House
+        ctx.fillStyle = '#fff5e1';
+        ctx.fillRect(700, 180, 260, 240);
+        ctx.fillStyle = '#e65046';
+        ctx.beginPath();
+        ctx.moveTo(680, 180);
+        ctx.lineTo(830, 100);
+        ctx.lineTo(980, 180);
+        ctx.fill();
+
+        // BYD Sealion 6 Shadow & Body
+        this.drawShadow(ctx, 420, 480, 460, 45);
+        const cx = 180, cy = 240;
+
+        // Black metallic body
+        ctx.fillStyle = '#1e2026';
+        ctx.beginPath();
+        ctx.moveTo(cx + 80, cy + 30);
+        ctx.lineTo(cx + 170, cy - 40);
+        ctx.lineTo(cx + 340, cy - 40);
+        ctx.lineTo(cx + 420, cy + 30);
+        ctx.lineTo(cx + 475, cy + 80);
+        ctx.lineTo(cx + 475, cy + 160);
+        ctx.lineTo(cx, cy + 160);
+        ctx.lineTo(cx, cy + 80);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#0f1014';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Chrome trim
+        ctx.strokeStyle = '#b4c3d7';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx + 90, cy + 28);
+        ctx.lineTo(cx + 170, cy - 36);
+        ctx.lineTo(cx + 340, cy - 36);
+        ctx.lineTo(cx + 415, cy + 28);
+        ctx.stroke();
+
+        // Windows
+        ctx.fillStyle = '#bed7eb';
+        ctx.beginPath();
+        ctx.moveTo(cx + 100, cy + 30);
+        ctx.lineTo(cx + 180, cy - 30);
+        ctx.lineTo(cx + 330, cy - 30);
+        ctx.lineTo(cx + 400, cy + 30);
+        ctx.closePath();
+        ctx.fill();
+
+        // BYD Badge
+        ctx.fillStyle = '#dce1eb';
+        this.roundRect(ctx, cx + 15, cy + 115, 48, 22, 6, true, false);
+        ctx.fillStyle = '#141923';
+        ctx.font = 'bold 13px "Segoe UI", sans-serif';
+        ctx.fillText("BYD", cx + 25, cy + 131);
+
+        // Side badge: BYD SEALION 6
+        ctx.fillStyle = '#becde1';
+        ctx.font = 'bold 15px "Segoe UI", sans-serif';
+        ctx.fillText("✦ BYD SEALION 6 ✦", cx + 105, cy + 135);
+
+        // Backpacks inside car
+        if (!this.car.thamBackpackTaken) {
+          this.drawCuteBackpack(ctx, 335, 305, 50, 60, 'tham', this.tick);
+        }
+        if (!this.car.thoBackpackTaken) {
+          this.drawCuteBackpack(ctx, 405, 305, 50, 60, 'tho', this.tick + 10);
+        }
+
+        // Car Door Simulation
+        if (!this.car.doorClosed) {
+          ctx.fillStyle = '#2d3038';
+          ctx.beginPath();
+          ctx.moveTo(cx + 255, cy + 30);
+          ctx.lineTo(cx + 395, cy + 50);
+          ctx.lineTo(cx + 385, cy + 180);
+          ctx.lineTo(cx + 255, cy + 160);
+          ctx.closePath();
+          ctx.fill();
+          ctx.strokeStyle = '#14161c';
+          ctx.stroke();
+
+          // Chrome handle
+          ctx.fillStyle = '#f5f5fa';
+          this.roundRect(ctx, cx + 350, cy + 115, 28, 9, 4, true, false);
+
+          // Pulsing prompt
+          const pulse = Math.sin(this.tick * 0.15) * 4;
+          ctx.fillStyle = '#ffe600';
+          ctx.beginPath();
+          ctx.arc(cx + 400, cy + 105, 16 + pulse, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#141414';
+          ctx.font = 'bold 13px "Segoe UI", sans-serif';
+          ctx.fillText("👉 Đóng cửa xe BYD Sealion 6!", cx + 420, cy + 110);
+        } else {
+          ctx.fillStyle = '#1a1c22';
+          ctx.fillRect(cx + 255, cy + 30, 140, 130);
+          ctx.fillStyle = '#f5f5fa';
+          this.roundRect(ctx, cx + 360, cy + 105, 26, 8, 4, true, false);
+
+          // Blink lights
+          if (this.car.blink > 0 && Math.floor(this.car.blink / 6) % 2 === 0) {
+            ctx.fillStyle = '#ffdc00';
+            ctx.beginPath();
+            ctx.arc(cx + 470, cy + 100, 16, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // Wheels
+        [cx + 100, cx + 380].forEach(wx => {
+          ctx.fillStyle = '#1e2024';
+          ctx.beginPath();
+          ctx.arc(wx, cy + 160, 38, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#d2d7e1';
+          ctx.beginPath();
+          ctx.arc(wx, cy + 160, 22, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        // Characters outside
+        this.drawCharacter(ctx, 100, 420, 'Tham', 1.1, this.car.thamBackpackTaken);
+        this.drawCharacter(ctx, 180, 435, 'Tho', 1.1, this.car.thoBackpackTaken);
+
+        // Next Button if done
+        if (this.tasksDone[0] && this.tasksDone[1]) {
+          this.drawPromptButton(ctx, this.width / 2, 580, "Đi Vào Nhà Nào ➔");
+        }
+      }
+
+      // ==========================================
+      // SCENE 2: SHOES
+      // ==========================================
+      drawShoesScene() {
+        const ctx = this.ctx;
+        // Warm wall & wood floor
+        ctx.fillStyle = '#fff8e6';
+        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.fillStyle = '#d7af82';
+        ctx.fillRect(0, 380, this.width, 25);
+        ctx.fillStyle = '#e6be8c';
+        ctx.fillRect(0, 405, this.width, this.height - 405);
+
+        // Cloud Mat
+        ctx.fillStyle = '#aadcfa';
+        this.roundRect(ctx, 200, 465, 380, 105, 25, true, false);
+        ctx.strokeStyle = '#78b9d7';
+        ctx.lineWidth = 3;
+        this.roundRect(ctx, 200, 465, 380, 105, 25, false, true);
+        ctx.fillStyle = '#467896';
+        ctx.font = 'bold 15px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("★ Chào Mừng Về Nhà ★", 390, 500);
+
+        // COLORFUL SHOE RACK
+        const rx = 630, ry = 230, rw = 320, rh = 280;
+        ctx.fillStyle = '#ff8cb4';
+        this.roundRect(ctx, rx + 10, ry - 25, rw - 20, 34, 12, true, false);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 14px "Segoe UI", sans-serif';
+        ctx.fillText("🌈 KỆ GIÀY SẮC MÀU 🌈", rx + rw / 2, ry - 3);
+
+        ctx.fillStyle = '#c3b9f5';
+        this.roundRect(ctx, rx, ry, rw, rh, 16, true, false);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        this.roundRect(ctx, rx, ry, rw, rh, 16, false, true);
+
+        // Tier 1: Thắm
+        const t1y = ry + 35;
+        ctx.fillStyle = '#ffcde0';
+        this.roundRect(ctx, rx + 15, t1y, rw - 30, 95, 12, true, false);
+        ctx.fillStyle = '#c8285a';
+        ctx.font = 'bold 13px "Segoe UI", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText("🌸 Ngăn Bé Thắm (Tầng 1)", rx + 25, t1y + 24);
+        this.drawCircularAvatar(ctx, imgTham, rx + rw - 60, t1y + 6, 40, '#ffd700');
+
+        // Tier 2: Thơ
+        const t2y = ry + 145;
+        ctx.fillStyle = '#fff2a0';
+        this.roundRect(ctx, rx + 15, t2y, rw - 30, 95, 12, true, false);
+        ctx.fillStyle = '#b46e00';
+        ctx.fillText("⭐ Ngăn Bé Thơ (Tầng 2)", rx + 25, t2y + 24);
+        this.drawCircularAvatar(ctx, imgTho, rx + rw - 60, t2y + 6, 40, '#ffd700');
+
+        // Shoes Thắm
+        if (this.shoes.thamOnRack) {
+          this.drawCuteShoes(ctx, rx + 130, t1y + 55, 'tham');
+        } else {
+          this.drawCuteShoes(ctx, 300, 505, 'tham', this.tick);
+          ctx.fillStyle = '#dc3264';
+          ctx.font = 'bold 12px "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText("👉 Giày Thắm", 300, 485);
+        }
+
+        // Shoes Thơ
+        if (this.shoes.thoOnRack) {
+          this.drawCuteShoes(ctx, rx + 130, t2y + 55, 'tho');
+        } else {
+          this.drawCuteShoes(ctx, 470, 505, 'tho', this.tick + 10);
+          ctx.fillStyle = '#be8200';
+          ctx.font = 'bold 12px "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText("👉 Giày Thơ", 470, 485);
+        }
+
+        // Characters
+        this.drawCharacter(ctx, 110, 390, 'Tham', 1.1, this.shoes.thamOnRack);
+        this.drawCharacter(ctx, 190, 405, 'Tho', 1.1, this.shoes.thoOnRack);
+
+        if (this.tasksDone[2]) {
+          this.drawPromptButton(ctx, this.width / 2, 580, "🚪 Cất Cặp Sách Vào Tủ ➔");
+        }
+      }
+
+      // ==========================================
+      // SCENE 3: STUDY (2-COMPARTMENT CABINET)
+      // ==========================================
+      drawStudyScene() {
+        const ctx = this.ctx;
+        // Pastel bedroom
+        ctx.fillStyle = '#fff5f0';
+        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.fillStyle = '#f5dcd7';
+        ctx.fillRect(0, 390, this.width, 20);
+        ctx.fillStyle = '#f0d7b9';
+        ctx.fillRect(0, 410, this.width, this.height - 410);
+
+        // Window
+        ctx.fillStyle = '#b4e1ff';
+        ctx.fillRect(60, 110, 220, 170);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 8;
+        ctx.strokeRect(60, 110, 220, 170);
+
+        // Cabinet 2 Compartments
+        const cabX = 460, cabY = 130, cabW = 490, cabH = 400;
+        ctx.fillStyle = '#ff96b4';
+        this.roundRect(ctx, cabX + 20, cabY - 25, cabW - 40, 36, 14, true, false);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 15px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("🚪 TỦ CẤT CẶP 2 NGĂN CỦA HAI BÉ", cabX + cabW / 2, cabY - 2);
+
+        ctx.fillStyle = '#faf0e6';
+        this.roundRect(ctx, cabX, cabY, cabW, cabH, 18, true, false);
+        ctx.strokeStyle = '#dcbeaf';
+        ctx.lineWidth = 5;
+        this.roundRect(ctx, cabX, cabY, cabW, cabH, 18, false, true);
+
+        // Compartment 1: Thắm
+        const t1x = cabX + 18, t1y = cabY + 25, t1w = 215, t1h = cabH - 45;
+        ctx.fillStyle = '#ffebf2';
+        this.roundRect(ctx, t1x, t1y, t1w, t1h, 12, true, false);
+        ctx.fillStyle = '#ff6e9b';
+        this.roundRect(ctx, t1x + 12, t1y + 10, t1w - 24, 32, 8, true, false);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px "Segoe UI", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText("🌸 Ngăn Bé Thắm (Ngăn 1)", t1x + 20, t1y + 30);
+        this.drawCircularAvatar(ctx, imgTham, t1x + t1w - 52, t1y + 5, 42, '#ffd700');
+
+        const shelfT1y = t1y + t1h - 100;
+        ctx.fillStyle = '#ffc5d7';
+        this.roundRect(ctx, t1x + 10, shelfT1y, t1w - 20, 14, 5, true, false);
+
+        if (this.study.thamPlaced) {
+          this.drawCuteBackpack(ctx, t1x + t1w / 2, shelfT1y - 45, 74, 84, 'tham');
+        } else {
+          ctx.strokeStyle = '#ff8cb4';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 6]);
+          this.roundRect(ctx, t1x + t1w / 2 - 42, shelfT1y - 92, 84, 90, 12, false, true);
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#dc3c64';
+          ctx.font = 'bold 12px "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText("👉 Đặt Cặp Thắm", t1x + t1w / 2, shelfT1y - 45);
+        }
+
+        // Compartment 2: Thơ
+        const t2x = cabX + cabW / 2 + 8, t2y = cabY + 25, t2w = 215, t2h = cabH - 45;
+        ctx.fillStyle = '#fffce6';
+        this.roundRect(ctx, t2x, t2y, t2w, t2h, 12, true, false);
+        ctx.fillStyle = '#f5af14';
+        this.roundRect(ctx, t2x + 12, t2y + 10, t2w - 24, 32, 8, true, false);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px "Segoe UI", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText("⭐ Ngăn Bé Thơ (Ngăn 2)", t2x + 20, t2y + 30);
+        this.drawCircularAvatar(ctx, imgTho, t2x + t2w - 52, t2y + 5, 42, '#ffd700');
+
+        const shelfT2y = t2y + t2h - 100;
+        ctx.fillStyle = '#ffe696';
+        this.roundRect(ctx, t2x + 10, shelfT2y, t2w - 20, 14, 5, true, false);
+
+        if (this.study.thoPlaced) {
+          this.drawCuteBackpack(ctx, t2x + t2w / 2, shelfT2y - 45, 74, 84, 'tho');
+        } else {
+          ctx.strokeStyle = '#f0af14';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 6]);
+          this.roundRect(ctx, t2x + t2w / 2 - 42, shelfT2y - 92, 84, 90, 12, false, true);
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#b47800';
+          ctx.font = 'bold 12px "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText("👉 Đặt Cặp Thơ", t2x + t2w / 2, shelfT2y - 45);
+        }
+
+        // Characters & backpacks on side if not placed
+        this.drawCharacter(ctx, 170, 400, 'Tham', 1.1, this.study.thamPlaced);
+        this.drawCharacter(ctx, 320, 415, 'Tho', 1.1, this.study.thoPlaced);
+
+        if (!this.study.thamPlaced) {
+          this.drawCuteBackpack(ctx, 225, 415, 62, 72, 'tham', this.tick);
+          ctx.fillStyle = '#dc3264';
+          ctx.font = 'bold 12px "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText("👉 Bấm cất cặp", 225, 465);
+        }
+        if (!this.study.thoPlaced) {
+          this.drawCuteBackpack(ctx, 375, 430, 62, 72, 'tho', this.tick + 10);
+          ctx.fillStyle = '#b47800';
+          ctx.font = 'bold 12px "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText("👉 Bấm cất cặp", 375, 480);
+        }
+
+        if (this.tasksDone[3]) {
+          this.drawPromptButton(ctx, this.width / 2, 580, "🍽️ Đến Giờ Ăn Cơm Nào ➔");
+        }
+      }
+
+      // ==========================================
+      // SCENE 4: DINING
+      // ==========================================
+      drawDiningScene() {
+        const ctx = this.ctx;
+        ctx.fillStyle = '#fff8eb';
+        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.fillStyle = '#e6c8aa';
+        ctx.fillRect(0, 420, this.width, this.height - 420);
+
+        // Family Picture with actual photos
+        ctx.fillStyle = '#ffffff';
+        this.roundRect(ctx, 350, 100, 300, 160, 12, true, false);
+        ctx.strokeStyle = '#c38c5a';
+        ctx.lineWidth = 6;
+        this.roundRect(ctx, 350, 100, 300, 160, 12, false, true);
+
+        ctx.fillStyle = '#c83c50';
+        ctx.font = 'bold 14px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("❤ GIA ĐÌNH HẠNH PHÚC ❤", 500, 125);
+        this.drawCircularAvatar(ctx, imgTham, 400, 145, 65, '#ffd700');
+        this.drawCircularAvatar(ctx, imgTho, 535, 145, 65, '#ffd700');
+
+        // Dining Table
+        ctx.fillStyle = '#fae1c3';
+        ctx.beginPath();
+        ctx.ellipse(540, 405, 220, 95, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#dcaf87';
+        ctx.lineWidth = 5;
+        ctx.stroke();
+
+        // 4 Foods
+        const foods = [
+          { x: 400, y: 340, w: 70, h: 60, col: '#f0f0f5', name: "Bát Cơm" },
+          { x: 475, y: 335, w: 75, h: 55, col: '#be5028', name: "Thịt Sườn" },
+          { x: 555, y: 335, w: 75, h: 55, col: '#50b95a', name: "Rau Xanh" },
+          { x: 635, y: 340, w: 70, h: 60, col: '#ffa046', name: "Bát Canh" },
+        ];
+
+        foods.forEach((f, i) => {
+          if (!this.dining.foodEaten[i]) {
+            ctx.fillStyle = f.col;
+            ctx.beginPath();
+            ctx.ellipse(f.x + f.w / 2, f.y + f.h / 2, f.w / 2, f.h / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = (i === 0) ? '#50505a' : '#ffffff';
+            ctx.font = 'bold 11px "Segoe UI", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(f.name, f.x + f.w / 2, f.y + f.h / 2 + 4);
+          } else {
+            ctx.strokeStyle = '#dcdee1';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(f.x + f.w / 2, f.y + f.h / 2, f.w / 2, f.h / 2, 0, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        });
+
+        // Characters sitting at table
+        this.drawCharacter(ctx, 230, 370, 'Tham', 1.1, this.tasksDone[4]);
+        this.drawCharacter(ctx, 830, 370, 'Tho', 1.1, this.tasksDone[4]);
+
+        if (!this.tasksDone[4]) {
+          const pulse = Math.sin(this.tick * 0.15) * 4;
+          ctx.fillStyle = '#b44614';
+          ctx.font = 'bold 15px "Segoe UI", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText("👉 Bé hãy bấm vào các món ăn trên bàn để Thắm & Thơ măm măm nhé!", this.width / 2, 285 + pulse);
+        } else {
+          this.drawPromptButton(ctx, this.width / 2, 580, "🧽 Đi Rửa Bát Nào ➔");
+        }
+      }
+
+      // ==========================================
+      // SCENE 5: DISHES
+      // ==========================================
+      drawDishesScene() {
+        const ctx = this.ctx;
+        ctx.fillStyle = '#f0f8ff';
+        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.fillStyle = '#e1e6eb';
+        ctx.fillRect(0, 340, this.width, this.height - 340);
+
+        // Sink
+        ctx.fillStyle = '#c8cdd7';
+        this.roundRect(ctx, 350, 300, 340, 210, 20, true, false);
+        ctx.fillStyle = '#96a0af';
+        this.roundRect(ctx, 365, 315, 310, 180, 16, true, false);
+
+        // Faucet
+        ctx.strokeStyle = '#8c96a0';
+        ctx.lineWidth = 12;
+        ctx.beginPath();
+        ctx.arc(500, 245, 30, Math.PI, 0);
+        ctx.stroke();
+
+        // Water
+        if (this.dishes.waterRunning) {
+          ctx.strokeStyle = '#82d2ff';
+          ctx.lineWidth = 4;
+          for (let i = 0; i < 4; i++) {
+            const off = Math.sin(this.tick * 0.3 + i) * 3;
+            ctx.beginPath();
+            ctx.moveTo(470 + off, 245);
+            ctx.lineTo(470 + off, 410);
+            ctx.stroke();
+          }
+        }
+
+        // Bubbles
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        for (let b of this.dishes.bubbles) {
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Sponge
+        ctx.fillStyle = '#ffd73c';
+        this.roundRect(ctx, 680, 340, 80, 60, 10, true, false);
+        ctx.fillStyle = '#785000';
+        ctx.font = 'bold 12px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("Bọt Biển", 720, 375);
+
+        // Characters
+        this.drawCharacter(ctx, 180, 390, 'Tham', 1.1, this.tasksDone[5]);
+        this.drawCharacter(ctx, 260, 405, 'Tho', 1.1, this.tasksDone[5]);
+
+        // Guidance
+        const pulse = Math.sin(this.tick * 0.15) * 4;
+        ctx.font = 'bold 15px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        if (this.dishes.step === 0) {
+          ctx.fillStyle = '#1464c8';
+          ctx.fillText("👉 Bước 1: Bé hãy bấm vào vòi nước để mở nước chảy nhé!", this.width / 2, 130 + pulse);
+        } else if (this.dishes.step === 1) {
+          ctx.fillStyle = '#c87800';
+          ctx.fillText("👉 Bước 2: Bấm vào miếng bọt biển vàng để xoa xà phòng!", this.width / 2, 130 + pulse);
+        } else if (this.dishes.step === 2) {
+          ctx.fillStyle = '#28a03c';
+          ctx.fillText("👉 Bước 3: Bấm vào bồn nước để tráng sạch bóng kin kít!", this.width / 2, 130 + pulse);
+        }
+
+        if (this.tasksDone[5]) {
+          this.drawPromptButton(ctx, this.width / 2, 580, "🧹 Ra Phòng Khách Dọn Dẹp ➔");
+        }
+      }
+
+      // ==========================================
+      // SCENE 6: LIVING ROOM
+      // ==========================================
+      drawLivingRoomScene() {
+        const ctx = this.ctx;
+        ctx.fillStyle = '#fff5e6';
+        ctx.fillRect(0, 0, this.width, this.height);
+        ctx.fillStyle = '#f0cda0';
+        ctx.fillRect(0, 420, this.width, this.height - 420);
+
+        // Sofa
+        ctx.fillStyle = '#ff8c46';
+        this.roundRect(ctx, 120, 240, 320, 160, 20, true, false);
+        ctx.fillStyle = '#ffaa6e';
+        this.roundRect(ctx, 145, 310, 270, 70, 12, true, false);
+
+        // Broom
+        ctx.strokeStyle = '#b47846';
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.moveTo(80, 480);
+        ctx.lineTo(95, 360);
+        ctx.stroke();
+
+        // Dust
+        for (let d of this.living.dust) {
+          if (!d.cleaned) {
+            ctx.fillStyle = (d.type === 'leaf') ? '#64a03c' : (d.type === 'paper') ? '#ffffff' : '#96826e';
+            ctx.beginPath();
+            ctx.arc(d.x, d.y, 8, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // Toy Box
+        ctx.fillStyle = '#3cc3af';
+        this.roundRect(ctx, 720, 360, 180, 100, 14, true, false);
+        ctx.fillStyle = '#ffd73c';
+        this.roundRect(ctx, 712, 348, 196, 24, 8, true, false);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 15px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText("Thùng Đồ Chơi 🧸", 810, 410);
+
+        // Toys
+        for (let t of this.living.toys) {
+          if (!t.stored) {
+            ctx.fillStyle = t.col;
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#464650';
+            ctx.font = 'bold 11px "Segoe UI", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText(t.name, t.x, t.y + 32);
+          }
+        }
+
+        // Characters
+        this.drawCharacter(ctx, 510, 370, 'Tham', 1.1, this.tasksDone[6] && this.tasksDone[7]);
+        this.drawCharacter(ctx, 580, 385, 'Tho', 1.1, this.tasksDone[6] && this.tasksDone[7]);
+
+        if (!this.tasksDone[6]) {
+          ctx.fillStyle = '#a05014';
+          ctx.font = 'bold 14px "Segoe UI", sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText("👉 Nhiệm vụ 7: Bấm vào các mẩu bụi/rác trên sàn để quét nhà nhé!", 140, 190);
+        }
+        if (!this.tasksDone[7]) {
+          ctx.fillStyle = '#148278';
+          ctx.font = 'bold 14px "Segoe UI", sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText("👉 Nhiệm vụ 8: Bấm vào các món đồ chơi để cất gọn vào thùng!", 140, 215);
+        }
+
+        if (this.tasksDone[6] && this.tasksDone[7]) {
+          this.drawPromptButton(ctx, this.width / 2, 580, "🎆 Xem Chiến Thắng & Pháo Hoa ➔");
+        }
+      }
+
+      // ==========================================
+      // SCENE 7: VICTORY CELEBRATION
+      // ==========================================
+      drawVictoryScene() {
+        const ctx = this.ctx;
+        // Night sky
+        ctx.fillStyle = '#121426';
+        ctx.fillRect(0, 0, this.width, this.height);
+
+        // Stars
+        ctx.fillStyle = '#ffffdc';
+        for (let i = 0; i < 40; i++) {
+          const sx = (i * 97 + this.tick) % this.width;
+          const sy = (i * 53) % (this.height - 150);
+          ctx.fillRect(sx, sy, 2, 2);
+        }
+
+        // Fireworks particles
+        for (let p of this.fireworks) {
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.alpha;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+
+        // 8 Gold Stars
+        const starY = 50;
+        for (let i = 0; i < 8; i++) {
+          const sx = this.width / 2 - 210 + i * 60;
+          const pulse = Math.sin(this.tick * 0.15 + i) * 3;
+          this.drawStar(ctx, sx, starY + pulse, 20, '#ffe11e', true);
+        }
+
+        // 3D CHIẾN THẮNG
+        ctx.font = 'bold 58px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        for (let off = 5; off > 0; off--) {
+          ctx.fillStyle = '#a0280a';
+          ctx.fillText("CHIẾN THẮNG!", this.width / 2 + off, 140 + off);
+        }
+        ctx.fillStyle = '#ffeb3c';
+        ctx.fillText("CHIẾN THẮNG!", this.width / 2, 140);
+
+        // Text 1: "Bé Thắm, Bé Thơ giỏi quá!"
+        ctx.font = 'bold 32px "Segoe UI", sans-serif';
+        ctx.fillStyle = '#b45000';
+        ctx.fillText("Bé Thắm, Bé Thơ giỏi quá!", this.width / 2 + 2, 195);
+        ctx.fillStyle = '#fff064';
+        ctx.fillText("Bé Thắm, Bé Thơ giỏi quá!", this.width / 2, 193);
+
+        // Text 2: "❤ Bố mẹ yêu hai em bé ❤"
+        const loveTxt = "❤ Bố mẹ yêu hai em bé ❤";
+        ctx.font = 'bold 28px "Segoe UI", sans-serif';
+        const bw = ctx.measureText(loveTxt).width + 40;
+        const pulseHeart = Math.sin(this.tick * 0.15) * 4;
+        ctx.fillStyle = '#e63c6e';
+        this.roundRect(ctx, this.width / 2 - bw / 2 - pulseHeart / 2, 222 - pulseHeart / 2, bw + pulseHeart, 46 + pulseHeart, 18, true, false);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        this.roundRect(ctx, this.width / 2 - bw / 2 - pulseHeart / 2, 222 - pulseHeart / 2, bw + pulseHeart, 46 + pulseHeart, 18, false, true);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(loveTxt, this.width / 2, 255);
+
+        // Actual photo portraits with ornate gold frames
+        const cx1 = this.width / 2 - 105;
+        const cx2 = this.width / 2 + 105;
+        const cyChar = 385;
+
+        this.drawAvatarPortrait(ctx, imgTham, cx1 - 145, 360, 95, "Bé Thắm", '#ff69b4');
+        this.drawAvatarPortrait(ctx, imgTho, cx2 + 145, 360, 95, "Bé Thơ", '#ffc314');
+
+        // Dancing characters with gold crowns
+        this.drawCharacter(ctx, cx1, cyChar, 'Tham', 1.2, true);
+        this.drawCharacter(ctx, cx2, cyChar + 8, 'Tho', 1.2, true);
+        this.drawCrown(ctx, cx1, cyChar - 38);
+        this.drawCrown(ctx, cx2, cyChar - 28);
+
+        // Voice buttons
+        this.drawButton(ctx, this.width / 2 - 250, 508, 240, 46, "🔊 Nghe: \"Yêu Thắm Thơ\" ❤", '#ff69b4', '#ffffff', 15);
+        this.drawButton(ctx, this.width / 2 + 10, 508, 240, 46, "🔊 Lời Bố Mẹ Yêu Thương 👨‍👩‍👧‍👧", '#46a0f0', '#ffffff', 15);
+
+        // Replay Button
+        const btnPulse = Math.sin(this.tick * 0.15) * 4;
+        ctx.fillStyle = '#ff6e00';
+        this.roundRect(ctx, this.width / 2 - 135 - btnPulse / 2, 570 - btnPulse / 2, 270 + btnPulse, 54 + btnPulse, 18, true, false);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        this.roundRect(ctx, this.width / 2 - 135 - btnPulse / 2, 570 - btnPulse / 2, 270 + btnPulse, 54 + btnPulse, 18, false, true);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 21px "Segoe UI", sans-serif';
+        ctx.fillText("🔄 CHƠI LẠI TỪ ĐẦU", this.width / 2, 604);
+      }
+
+      // ==========================================
+      // VECTOR GRAPHICS HELPERS
+      // ==========================================
+      drawCuteBackpack(ctx, cx, cy, w, h, theme, tick = 0) {
+        ctx.save();
+        const pulse = tick > 0 ? Math.sin(tick * 0.1) * 2 : 0;
+        const y = cy + pulse;
+        const colMain = (theme === 'tham') ? '#ff6ea0' : '#ffc819';
+        const colDark = (theme === 'tham') ? '#dc3c6e' : '#dc9600';
+        const colPouch = (theme === 'tham') ? '#ffaac8' : '#ffe678';
+
+        this.drawShadow(ctx, cx, y + h / 2 + 4, w + 12, 14);
+
+        // Handle
+        ctx.strokeStyle = colDark;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(cx, y - h / 2, 14, Math.PI, 0);
+        ctx.stroke();
+
+        // Main body
+        ctx.fillStyle = colMain;
+        this.roundRect(ctx, cx - w / 2, y - h / 2, w, h, 16, true, false);
+        ctx.strokeStyle = colDark;
+        ctx.lineWidth = 3;
+        this.roundRect(ctx, cx - w / 2, y - h / 2, w, h, 16, false, true);
+
+        // Pouch
+        const pw = w - 16;
+        const ph = Math.floor(h * 0.48);
+        ctx.fillStyle = colPouch;
+        this.roundRect(ctx, cx - pw / 2, y + h / 2 - ph - 6, pw, ph, 12, true, false);
+        ctx.strokeStyle = colDark;
+        ctx.lineWidth = 2;
+        this.roundRect(ctx, cx - pw / 2, y + h / 2 - ph - 6, pw, ph, 12, false, true);
+
+        // Badge: Strawberry for Thắm, Star for Thơ
+        if (theme === 'tham') {
+          ctx.fillStyle = '#ff3250';
+          ctx.beginPath();
+          ctx.arc(cx, y + h / 2 - ph / 2 - 2, 9, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          this.drawStar(ctx, cx, y + h / 2 - ph / 2 - 2, 10, '#ffe628', true);
+        }
+
+        // Name
+        ctx.fillStyle = '#3c3c46';
+        ctx.font = 'bold 11px "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(theme === 'tham' ? "Thắm" : "Thơ", cx, y - h / 2 + 15);
+        ctx.restore();
+      }
+
+      drawCuteShoes(ctx, cx, cy, theme, tick = 0) {
+        ctx.save();
+        const pulse = tick > 0 ? Math.sin(tick * 0.12) * 2 : 0;
+        const y = cy + pulse;
+        const colShoe = (theme === 'tham') ? '#ff78a0' : '#ffd22d';
+        const colDark = (theme === 'tham') ? '#dc3c6e' : '#dca00a';
+
+        this.drawShadow(ctx, cx, y + 12, 80, 16);
+
+        [-22, 22].forEach(offX => {
+          const sx = cx + offX;
+          ctx.fillStyle = colShoe;
+          ctx.beginPath();
+          ctx.ellipse(sx, y - 2, 18, 11, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = colDark;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // White toe cap
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.ellipse(offX < 0 ? sx - 8 : sx + 8, y - 2, 7, 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // White sole
+          ctx.fillRect(sx - 17, y + 2, 34, 7);
+          ctx.strokeStyle = '#b4b9c3';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(sx - 17, y + 2, 34, 7);
+        });
+        ctx.restore();
+      }
+
+      drawCharacter(ctx, x, y, name, scale = 1.0, isCheering = false) {
+        ctx.save();
+        const bob = isCheering ? Math.sin(this.tick * 0.1) * 3 : 0;
+        const cy = y + bob;
+        const isTham = (name === 'Tham');
+        const dressCol = isTham ? '#ff78a0' : '#ffd23c';
+        const dressBorder = isTham ? '#e64678' : '#e6aa14';
+        const shoeCol = isTham ? '#ff648c' : '#ffb414';
+
+        this.drawShadow(ctx, x, y + 75 * scale, 60 * scale, 16 * scale);
+
+        // Legs
+        ctx.fillStyle = '#ffe0c4';
+        ctx.fillRect(x - 12 * scale, cy + 45 * scale, 7 * scale, 22 * scale);
+        ctx.fillRect(x + 5 * scale, cy + 45 * scale, 7 * scale, 22 * scale);
+        ctx.fillStyle = shoeCol;
+        ctx.beginPath();
+        ctx.ellipse(x - 8 * scale, cy + 67 * scale, 9 * scale, 6 * scale, 0, 0, Math.PI * 2);
+        ctx.ellipse(x + 9 * scale, cy + 67 * scale, 9 * scale, 6 * scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Skirt
+        ctx.fillStyle = dressCol;
+        ctx.beginPath();
+        ctx.moveTo(x - 14 * scale, cy + 15 * scale);
+        ctx.lineTo(x + 14 * scale, cy + 15 * scale);
+        ctx.lineTo(x + 26 * scale, cy + 50 * scale);
+        ctx.lineTo(x - 26 * scale, cy + 50 * scale);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = dressBorder;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Arms
+        ctx.strokeStyle = '#ffe0c4';
+        ctx.lineWidth = 6 * scale;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        if (isCheering) {
+          ctx.moveTo(x - 14 * scale, cy + 25 * scale);
+          ctx.lineTo(x - 26 * scale, cy + 6 * scale);
+          ctx.moveTo(x + 14 * scale, cy + 25 * scale);
+          ctx.lineTo(x + 26 * scale, cy + 6 * scale);
+        } else {
+          ctx.moveTo(x - 14 * scale, cy + 25 * scale);
+          ctx.lineTo(x - 20 * scale, cy + 40 * scale);
+          ctx.moveTo(x + 14 * scale, cy + 25 * scale);
+          ctx.lineTo(x + 20 * scale, cy + 40 * scale);
+        }
+        ctx.stroke();
+
+        // Head (Using actual girl photos!)
+        const headSize = Math.floor(52 * scale);
+        const headY = cy - 8 * scale;
+        const img = isTham ? imgTham : imgTho;
+        this.drawCircularAvatar(ctx, img, x - headSize / 2, headY - headSize / 2, headSize, isTham ? '#ff78a0' : '#ffd23c');
+
+        ctx.restore();
+      }
+
+      drawAvatarPortrait(ctx, img, cx, cy, size, name, tagColor) {
+        ctx.save();
+        this.drawShadow(ctx, cx, cy + size / 2 + 5, size + 10, 16);
+        this.drawCircularAvatar(ctx, img, cx - size / 2, cy - size / 2, size, '#ffd700');
+
+        // Tag label below portrait
+        ctx.font = 'bold 13px "Segoe UI", sans-serif';
+        const tw = ctx.measureText(name).width;
+        ctx.fillStyle = tagColor;
+        this.roundRect(ctx, cx - tw / 2 - 8, cy + size / 2 - 4, tw + 16, 22, 8, true, false);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        this.roundRect(ctx, cx - tw / 2 - 8, cy + size / 2 - 4, tw + 16, 22, 8, false, true);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText(name, cx, cy + size / 2 + 12);
+        ctx.restore();
+      }
+
+      drawCircularAvatar(ctx, img, x, y, size, borderColor) {
+        ctx.save();
+        const r = size / 2;
+        ctx.beginPath();
+        ctx.arc(x + r, y + r, r, 0, Math.PI * 2);
+        ctx.clip();
+        if (img && img.complete && img.naturalWidth > 0) {
+          ctx.drawImage(img, x, y, size, size);
+        } else {
+          ctx.fillStyle = '#ffe0c4';
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // Gold/Color border
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x + r, y + r, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      drawCrown(ctx, x, y) {
+        ctx.fillStyle = '#ffd700';
+        ctx.beginPath();
+        ctx.moveTo(x - 18, y + 10);
+        ctx.lineTo(x - 22, y - 6);
+        ctx.lineTo(x - 9, y);
+        ctx.lineTo(x, y - 10);
+        ctx.lineTo(x + 9, y);
+        ctx.lineTo(x + 22, y - 6);
+        ctx.lineTo(x + 18, y + 10);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#e6a000';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      drawStar(ctx, cx, cy, size, color, filled = true) {
+        ctx.save();
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const r = (i % 2 === 0) ? size : size * 0.45;
+          const a = i * Math.PI / 5 - Math.PI / 2;
+          const px = cx + r * Math.cos(a);
+          const py = cy + r * Math.sin(a);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        if (filled) {
+          ctx.fillStyle = color;
+          ctx.fill();
+        }
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      drawShadow(ctx, cx, cy, w, h) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, w / 2, h / 2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      drawButton(ctx, x, y, w, h, text, bg, fg, fontSize = 14) {
+        ctx.fillStyle = bg;
+        this.roundRect(ctx, x, y, w, h, 8, true, false);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+        ctx.lineWidth = 1;
+        this.roundRect(ctx, x, y, w, h, 8, false, true);
+        ctx.fillStyle = fg;
+        ctx.font = `bold ${fontSize}px "Segoe UI", sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText(text, x + w / 2, y + h / 2 + fontSize / 3);
+      }
+
+      drawPromptButton(ctx, cx, cy, text) {
+        const pulse = Math.sin(this.tick * 0.15) * 4;
+        const w = 320 + pulse;
+        const h = 56 + pulse;
+        const x = cx - w / 2;
+        const y = cy - h / 2;
+
+        this.ctx.fillStyle = '#ff7800';
+        this.roundRect(this.ctx, x, y, w, h, 18, true, false);
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 3;
+        this.roundRect(this.ctx, x, y, w, h, 18, false, true);
+
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = 'bold 19px "Segoe UI", sans-serif';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(text, cx, cy + 6);
+      }
+
+      roundRect(ctx, x, y, w, h, r, fill, stroke) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+        if (fill) ctx.fill();
+        if (stroke) ctx.stroke();
+      }
+    }
+
+    // Launch Game when page loads
+    window.addEventListener('DOMContentLoaded', () => {
+      new WebGame();
+    });
+  </script>
+</body>
+</html>
