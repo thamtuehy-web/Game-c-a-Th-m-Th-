@@ -2,8 +2,21 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Thắm & Thơ Đi Học Về - Game Giáo Dục Trẻ Em</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Thắm & Thơ Đi Học Về - Game Giáo Dục Trẻ Em (BYD Sealion 6)</title>
+
+  <!-- Apple Mobile Web App & PWA Settings -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Thắm & Thơ">
+  <link rel="apple-touch-icon" href="assets/avatar_tham.png">
+
+  <!-- Mobile Orientation & Theme -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="screen-orientation" content="landscape">
+  <meta name="x5-orientation" content="landscape">
+  <meta name="theme-color" content="#0d101d">
+
   <style>
     * {
       box-sizing: border-box;
@@ -11,37 +24,192 @@
       padding: 0;
       user-select: none;
       -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
-    body {
-      background: linear-gradient(135deg, #1e2438, #111422);
-      color: #333;
+    html, body {
+      width: 100%;
+      height: 100%;
+      height: 100dvh;
+      height: -webkit-fill-available;
+      overflow: hidden;
+      background: #0d101d;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      touch-action: none;
+      position: fixed;
+      inset: 0;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
-      overflow: hidden;
-      touch-action: none;
     }
     #game-container {
       position: relative;
-      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
-      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      height: -webkit-fill-available;
       overflow: hidden;
       background: #000;
     }
     canvas {
       display: block;
-      background: #fff;
+      background: #ffffff;
       cursor: pointer;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
+      touch-action: none;
+      border-radius: 12px;
+      transition: width 0.1s ease-out, height 0.1s ease-out;
     }
+
+    /* Floating Fullscreen / Phóng To Button */
+    #fs-btn {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 120, 0, 0.92);
+      color: #ffffff;
+      border: 2px solid rgba(255, 255, 255, 0.85);
+      border-radius: 24px;
+      padding: 7px 15px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: all 0.2s ease;
+      touch-action: manipulation;
+    }
+    #fs-btn:active {
+      transform: scale(0.93);
+      background: #d85f00;
+    }
+    #fs-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* Rotation overlay for portrait orientation */
+    #rotate-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: linear-gradient(135deg, rgba(16, 22, 42, 0.97), rgba(28, 14, 38, 0.97));
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      color: #fff;
+    }
+    #rotate-overlay.visible {
+      display: flex;
+    }
+    .phone-anim {
+      width: 76px;
+      height: 125px;
+      border: 4px solid #ffaa00;
+      border-radius: 16px;
+      position: relative;
+      margin-bottom: 24px;
+      animation: rotatePhone 2.2s infinite ease-in-out;
+      box-shadow: 0 0 25px rgba(255, 170, 0, 0.5);
+    }
+    .phone-anim::after {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 24px;
+      height: 4px;
+      background: #ffaa00;
+      border-radius: 2px;
+    }
+    .phone-anim::before {
+      content: '👧👧';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 26px;
+    }
+    @keyframes rotatePhone {
+      0%, 15% { transform: rotate(0deg); }
+      50%, 75% { transform: rotate(90deg); }
+      90%, 100% { transform: rotate(0deg); }
+    }
+    #rotate-overlay h2 {
+      font-size: 22px;
+      margin-bottom: 12px;
+      color: #ffca28;
+      font-weight: 800;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+    #rotate-overlay p {
+      font-size: 14px;
+      line-height: 1.5;
+      max-width: 320px;
+      color: #e0e6ed;
+      margin-bottom: 22px;
+    }
+    #btn-dismiss-rotate {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      color: #ccc;
+      border-radius: 20px;
+      padding: 9px 20px;
+      font-size: 13px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    #btn-dismiss-rotate:active {
+      background: rgba(255, 255, 255, 0.3);
+      color: #fff;
+    }
+
+    /* iOS PWA tip banner */
+    #ios-tip {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.88);
+      color: #ffeaa7;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      border: 1px solid rgba(255, 234, 167, 0.4);
+      z-index: 120;
+      pointer-events: none;
+      display: none;
+      animation: fadeInOut 4.5s forwards;
+      white-space: nowrap;
+    }
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translate(-50%, 10px); }
+      15% { opacity: 1; transform: translate(-50%, 0); }
+      80% { opacity: 1; transform: translate(-50%, 0); }
+      100% { opacity: 0; transform: translate(-50%, -10px); display: none; }
+    }
+
     #mobile-hint {
       position: absolute;
       bottom: 8px;
       right: 12px;
       font-size: 11px;
-      color: rgba(255, 255, 255, 0.5);
+      color: rgba(255, 255, 255, 0.4);
       pointer-events: none;
     }
   </style>
@@ -50,7 +218,20 @@
 
   <div id="game-container">
     <canvas id="gameCanvas" width="1000" height="650"></canvas>
+    <button id="fs-btn" aria-label="Toàn màn hình">
+      <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+      <span>Phóng To</span>
+    </button>
     <div id="mobile-hint">Thắm & Thơ Đi Học Về • BYD Sealion 6</div>
+    <div id="ios-tip">💡 Mẹo iPhone: Nhấn nút Chia sẻ ⎋ ➔ "Thêm vào MH chính" để chơi full viền 100%!</div>
+  </div>
+
+  <!-- Portrait Orientation Rotate Prompt Overlay -->
+  <div id="rotate-overlay">
+    <div class="phone-anim"></div>
+    <h2>Vui Lòng Xoay Ngang Máy</h2>
+    <p>Trò chơi <strong>"Thắm & Thơ Đi Học Về"</strong> được thiết kế tối ưu xoay ngang trên iPhone & iPad để hai bé nhìn to và thao tác vui nhất!</p>
+    <button id="btn-dismiss-rotate">Tiếp tục chơi dọc (nếu đã khóa xoay)</button>
   </div>
 
   <script>
@@ -62,8 +243,8 @@
         this.ctx = null;
         this.enabled = true;
         this.voices = {
-          yeu_tham_tho: new Audio('/yeu_tham_tho.mp3'),
-          bo_me: new Audio('/chuc_mung_bo_me.mp3')
+          yeu_tham_tho: new Audio('yeu_tham_tho.mp3'),
+          bo_me: new Audio('chuc_mung_bo_me.mp3')
         };
       }
 
@@ -227,9 +408,9 @@
     // ASSET LOADER (Avatars of Thắm & Thơ)
     // ==========================================
     const imgTham = new Image();
-    imgTham.src = '/assets/avatar_tham.png';
+    imgTham.src = 'assets/avatar_tham.png';
     const imgTho = new Image();
-    imgTho.src = '/assets/avatar_tho.png';
+    imgTho.src = 'assets/avatar_tho.png';
 
     // ==========================================
     // MAIN GAME CLASS
@@ -243,6 +424,7 @@
         this.width = 1000;
         this.height = 650;
         this.tick = 0;
+        this.dismissRotateOverlay = false;
 
         this.scenes = ["car", "shoes", "study", "dining", "dishes", "living_room", "victory"];
         this.currentScene = "car";
@@ -261,19 +443,120 @@
         this.initVictory();
 
         this.bindEvents();
+        this.setupFullscreenAndOrientation();
         this.fitToScreen();
+
         window.addEventListener('resize', () => this.fitToScreen());
+        window.addEventListener('orientationchange', () => {
+          setTimeout(() => this.fitToScreen(), 150);
+        });
+        if (screen.orientation) {
+          screen.orientation.addEventListener('change', () => {
+            setTimeout(() => this.fitToScreen(), 150);
+          });
+        }
+
+        // Prevent iOS bounce / pull-down scroll gestures
+        document.addEventListener('touchmove', (e) => {
+          if (e.target === this.canvas || e.target.closest('#game-container')) {
+            e.preventDefault();
+          }
+        }, { passive: false });
 
         requestAnimationFrame(() => this.loop());
       }
 
+      setupFullscreenAndOrientation() {
+        const fsBtn = document.getElementById('fs-btn');
+        const fsText = fsBtn ? fsBtn.querySelector('span') : null;
+        const dismissBtn = document.getElementById('btn-dismiss-rotate');
+
+        if (dismissBtn) {
+          dismissBtn.addEventListener('click', () => {
+            this.dismissRotateOverlay = true;
+            const overlay = document.getElementById('rotate-overlay');
+            if (overlay) overlay.classList.remove('visible');
+            this.fitToScreen();
+          });
+        }
+
+        const isFullscreen = () => {
+          return !!(document.fullscreenElement || document.webkitFullscreenElement);
+        };
+
+        const updateFsButton = () => {
+          if (isFullscreen()) {
+            if (fsText) fsText.textContent = "Thu Nhỏ";
+          } else {
+            if (fsText) fsText.textContent = "Phóng To";
+          }
+        };
+
+        document.addEventListener('fullscreenchange', updateFsButton);
+        document.addEventListener('webkitfullscreenchange', updateFsButton);
+
+        if (fsBtn) {
+          fsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.sound.initContext();
+            const elem = document.documentElement;
+
+            if (!isFullscreen()) {
+              if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(() => {});
+              } else if (elem.webkitRequestFullscreen) {
+                elem.webkitRequestFullscreen();
+              } else {
+                // iPhone Safari fallback - show tips
+                const tip = document.getElementById('ios-tip');
+                if (tip) {
+                  tip.style.display = 'block';
+                  setTimeout(() => { tip.style.display = 'none'; }, 4500);
+                }
+              }
+              // Try screen orientation lock if supported
+              if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+              }
+            } else {
+              if (document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {});
+              } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+              }
+            }
+            setTimeout(() => this.fitToScreen(), 200);
+          });
+        }
+      }
+
       fitToScreen() {
-        const padding = 16;
-        const availW = window.innerWidth - padding * 2;
-        const availH = window.innerHeight - padding * 2;
-        const scale = Math.min(availW / this.width, availH / this.height, 1.25);
-        this.canvas.style.width = `${Math.floor(this.width * scale)}px`;
-        this.canvas.style.height = `${Math.floor(this.height * scale)}px`;
+        const isPortrait = window.innerHeight > window.innerWidth;
+        const overlay = document.getElementById('rotate-overlay');
+
+        if (overlay) {
+          if (isPortrait && !this.dismissRotateOverlay) {
+            overlay.classList.add('visible');
+          } else {
+            overlay.classList.remove('visible');
+            if (!isPortrait) {
+              this.dismissRotateOverlay = false;
+            }
+          }
+        }
+
+        const availW = window.innerWidth;
+        const availH = window.innerHeight;
+
+        // Scaling logic: maximize edge-to-edge fitting viewport without scale clamp
+        let scale = Math.min(availW / this.width, availH / this.height);
+        if (scale <= 0 || !isFinite(scale)) scale = 1.0;
+
+        const canvasW = Math.round(this.width * scale);
+        const canvasH = Math.round(this.height * scale);
+
+        this.canvas.style.width = `${canvasW}px`;
+        this.canvas.style.height = `${canvasH}px`;
       }
 
       showToast(text, duration = 120) {
@@ -391,8 +674,15 @@
           const rect = this.canvas.getBoundingClientRect();
           const scaleX = this.width / rect.width;
           const scaleY = this.height / rect.height;
-          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          let clientX = e.clientX;
+          let clientY = e.clientY;
+          if (e.touches && e.touches.length > 0) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+          } else if (e.changedTouches && e.changedTouches.length > 0) {
+            clientX = e.changedTouches[0].clientX;
+            clientY = e.changedTouches[0].clientY;
+          }
           return {
             x: (clientX - rect.left) * scaleX,
             y: (clientY - rect.top) * scaleY
